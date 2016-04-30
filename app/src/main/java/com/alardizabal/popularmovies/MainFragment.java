@@ -15,6 +15,9 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 
+import com.google.gson.Gson;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,10 +27,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainFragment extends Fragment {
 
     private ArrayAdapter<String> gridAdapter;
+    List<Movie> movies;
 //    private OnFragmentInteractionListener mListener;
 //
     public MainFragment() {
@@ -97,6 +103,7 @@ public class MainFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        movies = new ArrayList<Movie>();
         FetchMoviesTask moviesTask = new FetchMoviesTask();
         moviesTask.execute();
     }
@@ -108,17 +115,28 @@ public class MainFragment extends Fragment {
         private String[] getMovieDataFromJson(String forecastJsonStr)
                 throws JSONException {
 
-            // These are the names of the JSON objects that need to be extracted.
-//            final String OWM_LIST = "list";
-//            final String OWM_WEATHER = "weather";
-//            final String OWM_TEMPERATURE = "temp";
-//            final String OWM_MAX = "max";
-//            final String OWM_MIN = "min";
-//            final String OWM_DESCRIPTION = "main";
+            final String MOVIES_LIST = "results";
+
+            final String MOVIE_ID = "id";
+            final String MOVIE_ORIGINAL_TITLE = "original_title";
+            final String MOVIE_POSTER_PATH = "poster_path";
+            final String MOVIE_OVERVIEW = "overview";
+            final String MOVIE_VOTE_AVERAGE = "vote_average";
+            final String MOVIE_RELEASE_DATE = "release_date";
 
             JSONObject forecastJson = new JSONObject(forecastJsonStr);
+            JSONArray movieArray = forecastJson.getJSONArray(MOVIES_LIST);
 
-            Log.v(LOG_TAG, "JSON: " + forecastJsonStr);
+            for (int i = 0; i < movieArray.length(); i++) {
+                JSONObject movieObject = movieArray.getJSONObject(i);
+                Gson gson = new Gson();
+                String json = gson.toJson(movieArray.getJSONObject(i));
+                Movie movie = gson.fromJson(json, Movie.class);
+            }
+            MovieResponse movieResponse = MovieResponse.parseJSON(forecastJsonStr);
+            movies = movieResponse.movies;
+
+            Log.v(LOG_TAG, "JSON: " + forecastJson);
             return null;
 
         }
