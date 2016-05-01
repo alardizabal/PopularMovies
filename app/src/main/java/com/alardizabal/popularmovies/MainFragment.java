@@ -80,7 +80,6 @@ public class MainFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         gridView = (GridView) rootView.findViewById(R.id.gridview);
 
-
 //        gridview.setAdapter(new ImageAdapter(getActivity(), movies));
 
         return inflater.inflate(R.layout.fragment_main, container, false);
@@ -239,7 +238,7 @@ public class MainFragment extends Fragment {
             if (result != null) {
 //                gridAdapter.clear();
 //                gridAdapter.addAll(result);
-                ImageAdapter imageAdapter = new ImageAdapter((getContext()));
+                ImageAdapter imageAdapter = new ImageAdapter(getActivity().getBaseContext());
                 gridView.setAdapter(imageAdapter);
                 imageAdapter.notifyDataSetChanged();
                 System.out.println(gridView.getAdapter().getCount());
