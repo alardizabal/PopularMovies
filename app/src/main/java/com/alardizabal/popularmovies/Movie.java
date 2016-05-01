@@ -31,13 +31,13 @@ public class Movie {
     private String backdropPath;
     @SerializedName("popularity")
     @Expose
-    private Float popularity;
+    private Double popularity;
     @SerializedName("vote_count")
     @Expose
     private Long voteCount;
     @SerializedName("vote_average")
     @Expose
-    private Float voteAverage;
+    private Double voteAverage;
 
     /**
      *
@@ -170,7 +170,7 @@ public class Movie {
      * @return
      * The popularity
      */
-    public Float getPopularity() {
+    public Double getPopularity() {
         return popularity;
     }
 
@@ -179,7 +179,7 @@ public class Movie {
      * @param popularity
      * The popularity
      */
-    public void setPopularity(Float popularity) {
+    public void setPopularity(Double popularity) {
         this.popularity = popularity;
     }
 
@@ -206,7 +206,7 @@ public class Movie {
      * @return
      * The voteAverage
      */
-    public Float getVoteAverage() {
+    public Double getVoteAverage() {
         return voteAverage;
     }
 
@@ -215,7 +215,7 @@ public class Movie {
      * @param voteAverage
      * The vote_average
      */
-    public void setVoteAverage(Float voteAverage) {
+    public void setVoteAverage(Double voteAverage) {
         this.voteAverage = voteAverage;
     }
 }

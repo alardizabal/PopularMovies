@@ -13,9 +13,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 
-import com.google.gson.Gson;
+import com.bumptech.glide.Glide;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,8 +34,10 @@ import java.util.List;
 
 public class MainFragment extends Fragment {
 
-    private ArrayAdapter<String> gridAdapter;
-    List<Movie> movies;
+    private ArrayAdapter<Movie> gridAdapter;
+    private GridView gridView;
+//    private ImageAdapter imageAdapter;
+    public List<Movie> movies;
 //    private OnFragmentInteractionListener mListener;
 //
     public MainFragment() {
@@ -62,16 +66,22 @@ public class MainFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-//        gridAdapter = new ArrayAdapter<String>(
+
+//        GridView gridView = (GridView)fin
+//        gridAdapter = new ArrayAdapter<Movie>(getActivity(), R.layout.fragment_main, movies);
+//        gridAdapter = new ArrayAdapter<Movie>(
 //                getActivity(), // The current context (this activity)
-//                R.layout.list_item_forecast, // The name of the layout ID.
-//                R.id.list_item_forecast_textView, // The ID of the textview to populate.
-//                new ArrayList<String>());
+//                R.layout.fragment_main, // The name of the layout ID.
+//                R.id.gridview, // The ID of the textview to populate.
+//                new ArrayList<Movie>());
 
+
+        movies = new ArrayList<Movie>();
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+        gridView = (GridView) rootView.findViewById(R.id.gridview);
 
-        GridView gridview = (GridView) rootView.findViewById(R.id.gridview);
-//        gridview.setAdapter(new ImageAdapter(this));
+
+//        gridview.setAdapter(new ImageAdapter(getActivity(), movies));
 
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
@@ -103,19 +113,19 @@ public class MainFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        movies = new ArrayList<Movie>();
         FetchMoviesTask moviesTask = new FetchMoviesTask();
         moviesTask.execute();
     }
 
-    public class FetchMoviesTask extends AsyncTask<String, Void, String[]> {
+    public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {
 
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
-        private String[] getMovieDataFromJson(String forecastJsonStr)
+        private List<Movie> getMovieDataFromJson(String movieJsonStr)
                 throws JSONException {
 
             final String MOVIES_LIST = "results";
+            final String MOVIES_POSTER_BASE_URL = "http://image.tmdb.org/t/p/w185/";
 
             final String MOVIE_ID = "id";
             final String MOVIE_ORIGINAL_TITLE = "original_title";
@@ -124,30 +134,44 @@ public class MainFragment extends Fragment {
             final String MOVIE_VOTE_AVERAGE = "vote_average";
             final String MOVIE_RELEASE_DATE = "release_date";
 
-            JSONObject forecastJson = new JSONObject(forecastJsonStr);
-            JSONArray movieArray = forecastJson.getJSONArray(MOVIES_LIST);
+            JSONObject movieJson = new JSONObject(movieJsonStr);
+            Log.v(LOG_TAG, "JSON: " + movieJson);
+
+            JSONArray movieArray = movieJson.getJSONArray(MOVIES_LIST);
 
             for (int i = 0; i < movieArray.length(); i++) {
+
                 JSONObject movieObject = movieArray.getJSONObject(i);
-                Gson gson = new Gson();
-                String json = gson.toJson(movieArray.getJSONObject(i));
-                Movie movie = gson.fromJson(json, Movie.class);
+
+                Movie movie = new Movie();
+
+                Long movieId = movieObject.getLong(MOVIE_ID);
+                String originalTitle = movieObject.getString(MOVIE_ORIGINAL_TITLE);
+                String posterPath = movieObject.getString(MOVIE_POSTER_PATH);
+                String overview = movieObject.getString(MOVIE_OVERVIEW);
+                Double voteAverage = movieObject.getDouble(MOVIE_VOTE_AVERAGE);
+                String releaseDate = movieObject.getString(MOVIE_RELEASE_DATE);
+
+                movie.setId(movieId);
+                movie.setOriginalTitle(originalTitle);
+                movie.setPosterPath(MOVIES_POSTER_BASE_URL + posterPath);
+                movie.setOverview(overview);
+                movie.setVoteAverage(voteAverage);
+                movie.setReleaseDate(releaseDate);
+
+                movies.add(movie);
             }
-            MovieResponse movieResponse = MovieResponse.parseJSON(forecastJsonStr);
-            movies = movieResponse.movies;
 
-            Log.v(LOG_TAG, "JSON: " + forecastJson);
-            return null;
-
+            return movies;
         }
 
         @Override
-        protected String[] doInBackground(String... params) {
+        protected List<Movie> doInBackground(String... params) {
 
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
 
-            String forecastJsonStr = null;
+            String movieJsonStr = null;
 
             try {
                 final String FORECAST_BASE_URL =
@@ -181,9 +205,9 @@ public class MainFragment extends Fragment {
                 if (buffer.length() == 0) {
                     return null;
                 }
-                forecastJsonStr = buffer.toString();
+                movieJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Forecast string: " + forecastJsonStr);
+                Log.v(LOG_TAG, "Forecast string: " + movieJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -201,7 +225,7 @@ public class MainFragment extends Fragment {
             }
 
             try {
-                return getMovieDataFromJson(forecastJsonStr);
+                return getMovieDataFromJson(movieJsonStr);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
@@ -211,12 +235,56 @@ public class MainFragment extends Fragment {
             return null;
         }
 
-        @Override
-        protected void onPostExecute(String[] result) {
+        protected void onPostExecute(List<Movie> result) {
             if (result != null) {
-                gridAdapter.clear();
-                gridAdapter.addAll(result);
+//                gridAdapter.clear();
+//                gridAdapter.addAll(result);
+                ImageAdapter imageAdapter = new ImageAdapter((getContext()));
+                gridView.setAdapter(imageAdapter);
+                imageAdapter.notifyDataSetChanged();
+                System.out.println(gridView.getAdapter().getCount());
+
             }
+        }
+    }
+
+    public class ImageAdapter extends BaseAdapter {
+        private Context context;
+
+        public ImageAdapter(Context c) {
+            context = c;
+        }
+
+        public int getCount() {
+            System.out.println(movies.size());
+            return movies.size();
+        }
+
+        public Object getItem(int position) {
+            return null;
+        }
+
+        public long getItemId(int position) {
+            return 0;
+        }
+
+        // create a new ImageView for each item referenced by the Adapter
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView imageView;
+            if (convertView == null) {
+                // if it's not recycled, initialize some attributes
+                imageView = new ImageView(context);
+                imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
+                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                imageView.setPadding(8, 8, 8, 8);
+            } else {
+                imageView = (ImageView) convertView;
+            }
+
+            Movie movie = new Movie();
+            movie = movies.get(position);
+            Glide.with(context).load(movie.getPosterPath()).into(imageView);
+            return imageView;
         }
     }
 }
