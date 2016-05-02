@@ -2,16 +2,18 @@ package com.alardizabal.popularmovies;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -31,28 +33,108 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+    TODO
+    1) Move classes to standalone .java files if appropriate
+    2) Move content out of activity and into fragment
+    3) Use gson
+    4) Move strings to strings file
+    5) Move constants to constants file
+     */
+
 public class MainActivity extends AppCompatActivity {
+
+    enum SortByType {
+        mostPopular,
+        topRated
+    }
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
 
-    private ArrayAdapter<Movie> gridAdapter;
+    static final String STATE_SORT_TYPE = "sortType";
+    static final String BACK_BUTTON_PRESSED = "backButtonPressed";
+    static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
+
+    private Boolean backButtonPressed;
+
     private GridView gridView;
-    //    private ImageAdapter imageAdapter;
     public List<Movie> movies;
+
+    SortByType sortByType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (savedInstanceState != null) {
+            sortByType = (SortByType) savedInstanceState.get(STATE_SORT_TYPE);
+        }
         setContentView(R.layout.activity_main);
-        if (savedInstanceState == null) {
-            movies = new ArrayList<Movie>();
-            gridView = (GridView) findViewById(R.id.gridview);
+
+        movies = new ArrayList<>();
+        gridView = (GridView) findViewById(R.id.gridview);
+
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v,
+                                    int position, long id) {
+                Movie movie = movies.get(position);
+                Intent intent = new Intent(getBaseContext(), DetailActivity.class)
+                        .putExtra("originalTitle", movie.getOriginalTitle())
+                        .putExtra("posterPath", movie.getPosterPath())
+                        .putExtra("overview", movie.getOverview())
+                        .putExtra("voteAverage", movie.getVoteAverage())
+                        .putExtra("releaseDate", movie.getReleaseDate());
+                startActivity(intent);
+            }
+        });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        FetchMoviesTask moviesTask;
+
+        loadPreferences();
+
+        if (!backButtonPressed) {
+            if (sortByType == null) {
+                moviesTask = new FetchMoviesTask(SortByType.mostPopular);
+                moviesTask.execute();
+            } else {
+                moviesTask = new FetchMoviesTask(sortByType);
+                moviesTask.execute();
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.remove(BACK_BUTTON_PRESSED);
+        editor.commit();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable(STATE_SORT_TYPE, sortByType);
+    }
+
+    private void loadPreferences(){
+        SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
+        backButtonPressed = sharedPreferences.getBoolean(BACK_BUTTON_PRESSED, false);
+        if (backButtonPressed) {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean(BACK_BUTTON_PRESSED, false);
+            editor.commit();
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
@@ -61,25 +143,37 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
+        if (id == R.id.action_mostPopular) {
+            sortByType = SortByType.mostPopular;
+            FetchMoviesTask moviesTask = new FetchMoviesTask(sortByType);
+            moviesTask.execute();
+            return true;
+        }
+        if (id == R.id.action_topRated) {
+            sortByType = SortByType.topRated;
+            FetchMoviesTask moviesTask = new FetchMoviesTask(sortByType);
+            moviesTask.execute();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        FetchMoviesTask moviesTask = new FetchMoviesTask();
-        moviesTask.execute();
-    }
-
     public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {
 
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
+
+        private String MOVIE_BASE_URL;
+
+        public FetchMoviesTask (SortByType sortType) {
+            if (sortType == SortByType.mostPopular) {
+                sortByType = SortByType.mostPopular;
+                MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/popular?";
+            } else if (sortType == SortByType.topRated) {
+                sortByType = SortByType.topRated;
+                MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/top_rated?";
+            }
+        }
 
         private List<Movie> getMovieDataFromJson(String movieJsonStr)
                 throws JSONException {
@@ -93,6 +187,8 @@ public class MainActivity extends AppCompatActivity {
             final String MOVIE_OVERVIEW = "overview";
             final String MOVIE_VOTE_AVERAGE = "vote_average";
             final String MOVIE_RELEASE_DATE = "release_date";
+
+            movies.clear();
 
             JSONObject movieJson = new JSONObject(movieJsonStr);
             Log.v(LOG_TAG, "JSON: " + movieJson);
@@ -121,7 +217,6 @@ public class MainActivity extends AppCompatActivity {
 
                 movies.add(movie);
             }
-
             return movies;
         }
 
@@ -134,11 +229,9 @@ public class MainActivity extends AppCompatActivity {
             String movieJsonStr = null;
 
             try {
-                final String FORECAST_BASE_URL =
-                        "http://api.themoviedb.org/3/movie/popular?";
                 final String APPID_PARAM = "api_key";
 
-                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
+                Uri builtUri = Uri.parse(MOVIE_BASE_URL).buildUpon()
                         .appendQueryParameter(APPID_PARAM, BuildConfig.MOVIE_API_KEY)
                         .build();
 
@@ -167,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 movieJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Forecast string: " + movieJsonStr);
+                Log.v(LOG_TAG, "Movie JSON String: " + movieJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -190,15 +283,11 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
             }
-
-            // This will only happen if there was an error getting or parsing the forecast.
             return null;
         }
 
         protected void onPostExecute(List<Movie> result) {
             if (result != null) {
-//                gridAdapter.clear();
-//                gridAdapter.addAll(result);
                 ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
                 gridView.setAdapter(imageAdapter);
 
@@ -214,7 +303,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public int getCount() {
-            System.out.println(movies.size());
             return movies.size();
         }
 
@@ -226,20 +314,22 @@ public class MainActivity extends AppCompatActivity {
             return 0;
         }
 
-        // create a new ImageView for each item referenced by the Adapter
         public View getView(int position, View convertView, ViewGroup parent) {
             ImageView imageView;
             if (convertView == null) {
-                // if it's not recycled, initialize some attributes
                 imageView = new ImageView(context);
-                imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
+
+                DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+                int width = metrics.widthPixels;
+                int adjustedWidth = (int)(width/2);
+                int adjustedHeight = (int)(adjustedWidth * 1.5027027);
+                imageView.setLayoutParams(new GridView.LayoutParams(adjustedWidth, adjustedHeight));
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {
                 imageView = (ImageView) convertView;
             }
 
-            Movie movie = new Movie();
-            movie = movies.get(position);
+            Movie movie = movies.get(position);
             Glide.with(context).load(movie.getPosterPath()).into(imageView);
             return imageView;
         }
