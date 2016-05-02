@@ -18,7 +18,7 @@ android {
         }
     }
     buildTypes.each {
-        it.buildConfigField 'String', 'MOVIE_API_KEY', "\"ba198d80a86c3bdbfd8abb25290fdb87\""
+        it.buildConfigField 'String', 'MOVIE_API_KEY', "INSERT API KEY"
     }
 }
 
