@@ -4,4 +4,5 @@
     <string name="action_topRated">Top Rated</string>
     <string name="action_favorites">My Favorites</string>
     <string name="preference_file_key">com.alardizabal.popularmovies.PREFERENCE_FILE_KEY</string>
+    <string name="action_addFavorite">Add to Favorites</string>
 </resources>

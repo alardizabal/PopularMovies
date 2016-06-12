@@ -3,21 +3,27 @@ package com.alardizabal.popularmovies;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /*
     TODO
@@ -28,6 +34,9 @@ import java.util.List;
 
 public class DetailActivity extends AppCompatActivity {
 
+    private final String LOG_TAG = getClass().getSimpleName();
+
+    private String selectedMovieId = "";
     private String originalTitle = "";
     private String posterPath = "";
     private String overview = "";
@@ -41,6 +50,7 @@ public class DetailActivity extends AppCompatActivity {
     private ListView reviewsListView;
 
     static final String BACK_BUTTON_PRESSED = "backButtonPressed";
+    static final String FAVORITES_LIST = "favoritesList";
     static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
 
     @Override
@@ -53,6 +63,7 @@ public class DetailActivity extends AppCompatActivity {
 
         Intent intent = this.getIntent();
         if (intent != null) {
+            selectedMovieId = intent.getStringExtra("movieId");
             originalTitle = intent.getStringExtra("originalTitle");
             posterPath = intent.getStringExtra("posterPath");
             overview = intent.getStringExtra("overview");
@@ -78,11 +89,60 @@ public class DetailActivity extends AppCompatActivity {
         if (textViewReleaseDate != null) {
             textViewReleaseDate.setText("Release Date: " + releaseDate);
         }
+
+        final SharedPreferences sharedPreferences = getBaseContext().getSharedPreferences(PREFERENCE_FILE_KEY, getBaseContext().MODE_PRIVATE);
+        final Set<String> savedFavoritesList = sharedPreferences.getStringSet(FAVORITES_LIST, new HashSet<String>());
+
+        final Button button = (Button) findViewById(R.id.addFavoriteButton);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+
+                String buttonText = button.getText().toString();
+                if (buttonText == "Add to Favorites") {
+                    savedFavoritesList.add(selectedMovieId);
+
+                    editor.putStringSet(FAVORITES_LIST, savedFavoritesList);
+                    editor.commit();
+
+                    button.setText("Remove from Favorites");
+
+                    Toast toast = Toast.makeText(getBaseContext(), "Added to favorites!", Toast.LENGTH_SHORT);
+                    toast.show();
+                } else {
+                    savedFavoritesList.remove(selectedMovieId);
+
+                    editor.putStringSet(FAVORITES_LIST, savedFavoritesList);
+                    editor.commit();
+
+                    button.setText("Add to Favorites");
+
+                    Toast toast = Toast.makeText(getBaseContext(), "Removed from favorites!", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }
+        });
+
+        if (savedFavoritesList.contains(selectedMovieId) == true) {
+            button.setText("Remove from Favorites");
+        } else {
+            button.setText("Add to Favorites");
+        }
+
         ImageView imageView = (ImageView) findViewById(R.id.imageView);
         Glide.with(this).load(posterPath).into(imageView);
 
         TrailerListAdapter trailerListAdapter = new TrailerListAdapter(this, R.layout.list_item_trailer, trailers);
         trailersListView.setAdapter(trailerListAdapter);
+
+        trailersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Trailer trailer = trailers.get(position);
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.youtube.com/watch?v=" + trailer.getKey())));
+            }
+        });
 
         ReviewListAdapter reviewListAdapter = new ReviewListAdapter(this, R.layout.list_item_review, reviews);
         reviewsListView.setAdapter(reviewListAdapter);
@@ -92,6 +152,10 @@ public class DetailActivity extends AppCompatActivity {
             reviewsTitleLabel.setVisibility(View.GONE);
             reviewsListView.setVisibility(View.GONE);
         }
+    }
+
+    private void updateFavoriteButtonState() {
+
     }
 
     @Override

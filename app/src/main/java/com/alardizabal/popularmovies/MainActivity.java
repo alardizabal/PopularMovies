@@ -34,7 +34,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /*
     TODO
@@ -87,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
     static final String STATE_SORT_TYPE = "sortType";
     static final String BACK_BUTTON_PRESSED = "backButtonPressed";
+    static final String FAVORITES_LIST = "favoritesList";
     static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
 
     private Boolean backButtonPressed;
@@ -95,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
     public List<Movie> movies;
     public ArrayList<Trailer> trailers;
     public ArrayList<Review> reviews;
+    private Set<String> savedFavoritesList;
 
     private Movie selectedMovie;
     private String selectedMovieId;
@@ -189,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
             editor.putBoolean(BACK_BUTTON_PRESSED, false);
             editor.commit();
         }
+        savedFavoritesList = sharedPreferences.getStringSet(FAVORITES_LIST, new HashSet<String>());
     }
 
     @Override
@@ -215,6 +220,25 @@ public class MainActivity extends AppCompatActivity {
         }
         if (id == R.id.action_favorites) {
             sortByType = SortByType.favorites;
+
+            if (savedFavoritesList.size() == 0) {
+                movies.clear();
+            } else {
+                int lastMovieIndex = movies.size() - 1;
+                for (int i = lastMovieIndex; i > 0; i--) {
+                    Movie movie = movies.get(i);
+                    String movieId = movie.getId().toString();
+                    Boolean isFavorite = savedFavoritesList.contains(movieId);
+
+                    if (isFavorite == false) {
+                        movies.remove(i);
+                    }
+                }
+            }
+
+            ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
+            gridView.setAdapter(imageAdapter);
+
             return true;
         }
 
@@ -253,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
             movies.clear();
 
             JSONObject moviesJson = new JSONObject(moviesJsonStr);
-            Log.v(LOG_TAG, "JSON: " + moviesJson);
+            Log.d(LOG_TAG, "JSON: " + moviesJson);
 
             JSONArray movieArray = moviesJson.getJSONArray(MOVIES_LIST);
 
@@ -299,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
 
                 URL url = new URL(builtUri.toString());
 
-                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                Log.d(LOG_TAG, "Built URI " + builtUri.toString());
 
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
@@ -322,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 moviesJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Movie JSON String: " + moviesJsonStr);
+                Log.d(LOG_TAG, "Movie JSON String: " + moviesJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -372,7 +396,7 @@ public class MainActivity extends AppCompatActivity {
             trailers.clear();
 
             JSONObject trailersJson = new JSONObject(trailersJsonStr);
-            Log.v(LOG_TAG, "JSON: " + trailersJson);
+            Log.d(LOG_TAG, "JSON: " + trailersJson);
 
             JSONArray trailersArray = trailersJson.getJSONArray(TRAILERS_LIST);
 
@@ -413,7 +437,7 @@ public class MainActivity extends AppCompatActivity {
 
                 URL url = new URL(builtUri.toString());
 
-                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                Log.d(LOG_TAG, "Built URI " + builtUri.toString());
 
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
@@ -436,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 trailersJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Trailer JSON String: " + trailersJsonStr);
+                Log.d(LOG_TAG, "Trailer JSON String: " + trailersJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -488,7 +512,7 @@ public class MainActivity extends AppCompatActivity {
             reviews.clear();
 
             JSONObject reviewJson = new JSONObject(reviewsJsonStr);
-            Log.v(LOG_TAG, "JSON: " + reviewJson);
+            Log.d(LOG_TAG, "JSON: " + reviewJson);
 
             JSONArray reviewArray = reviewJson.getJSONArray(REVIEWS_LIST);
 
@@ -528,7 +552,7 @@ public class MainActivity extends AppCompatActivity {
 
                 URL url = new URL(builtUri.toString());
 
-                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                Log.d(LOG_TAG, "Built URI " + builtUri.toString());
 
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
@@ -551,7 +575,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 reviewsJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Review JSON String: " + reviewsJsonStr);
+                Log.d(LOG_TAG, "Review JSON String: " + reviewsJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -581,6 +605,7 @@ public class MainActivity extends AppCompatActivity {
             if (result != null) {
                 reviews = new ArrayList<>(result);
                 Intent intent = new Intent(getBaseContext(), DetailActivity.class)
+                        .putExtra("movieId", selectedMovieId)
                         .putExtra("originalTitle", selectedMovie.getOriginalTitle())
                         .putExtra("posterPath", selectedMovie.getPosterPath())
                         .putExtra("overview", selectedMovie.getOverview())
