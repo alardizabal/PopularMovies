@@ -1,4 +1,4 @@
-package com.alardizabal.popularmovies;
+package com.alardizabal.popularmovies.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -18,6 +18,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.alardizabal.popularmovies.R;
+import com.alardizabal.popularmovies.models.Review;
+import com.alardizabal.popularmovies.models.Trailer;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;

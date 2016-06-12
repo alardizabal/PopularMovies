@@ -1,4 +1,4 @@
-package com.alardizabal.popularmovies;
+package com.alardizabal.popularmovies.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -18,6 +18,11 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
+import com.alardizabal.popularmovies.BuildConfig;
+import com.alardizabal.popularmovies.models.Movie;
+import com.alardizabal.popularmovies.R;
+import com.alardizabal.popularmovies.models.Review;
+import com.alardizabal.popularmovies.models.Trailer;
 import com.bumptech.glide.Glide;
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;

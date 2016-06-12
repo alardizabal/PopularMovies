@@ -1,7 +1,9 @@
-package com.alardizabal.popularmovies;
+package com.alardizabal.popularmovies.activities;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import com.alardizabal.popularmovies.R;
 
 public class SettingsActivity extends AppCompatActivity {
 

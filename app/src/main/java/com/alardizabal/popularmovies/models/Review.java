@@ -1,4 +1,4 @@
-package com.alardizabal.popularmovies;
+package com.alardizabal.popularmovies.models;
 
 import android.os.Parcel;
 import android.os.Parcelable;
