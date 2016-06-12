@@ -72,10 +72,49 @@
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:textColor="@android:color/darker_gray"
+            android:text="Trailers"
+            android:id="@+id/trailersTitleLabel"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_below="@+id/imageView"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
+
         <ListView
-            android:id="@+id/listview"
+            android:id="@+id/trailersListview"
+            android:layout_marginTop="10dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="200dp"
+            android:layout_below="@+id/trailersTitleLabel">
         </ListView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:padding="10dp"
+            android:textColor="@android:color/darker_gray"
+            android:text="Reviews"
+            android:id="@+id/reviewsTitleLabel"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_below="@+id/trailersListview"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
+
+        <ListView
+            android:id="@+id/reviewsListview"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="2000dp"
+            android:layout_below="@id/reviewsTitleLabel">
+        </ListView>
+
     </RelativeLayout>
 </ScrollView>
