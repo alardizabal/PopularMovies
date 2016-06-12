@@ -19,6 +19,9 @@ import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,13 +43,44 @@ import java.util.List;
     3) Use gson
     4) Move strings to strings file
     5) Move constants to constants file
+    6) Make models conforms to Parcelable
+    7) Use butterknife
+    8) Use Retrofit
+    9) Glide error handling
      */
 
 public class MainActivity extends AppCompatActivity {
 
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.alardizabal.popularmovies/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
+    }
+
     enum SortByType {
         mostPopular,
-        topRated
+        topRated,
+        favorites
     }
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
@@ -59,6 +93,11 @@ public class MainActivity extends AppCompatActivity {
 
     private GridView gridView;
     public List<Movie> movies;
+    public ArrayList<Trailer> trailers;
+    public ArrayList<Review> reviews;
+
+    private Movie selectedMovie;
+    private String selectedMovieId;
 
     SortByType sortByType;
 
@@ -72,26 +111,32 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         movies = new ArrayList<>();
+        trailers = new ArrayList<>();
+        reviews = new ArrayList<>();
+
         gridView = (GridView) findViewById(R.id.gridview);
 
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v,
                                     int position, long id) {
-                Movie movie = movies.get(position);
-                Intent intent = new Intent(getBaseContext(), DetailActivity.class)
-                        .putExtra("originalTitle", movie.getOriginalTitle())
-                        .putExtra("posterPath", movie.getPosterPath())
-                        .putExtra("overview", movie.getOverview())
-                        .putExtra("voteAverage", movie.getVoteAverage())
-                        .putExtra("releaseDate", movie.getReleaseDate());
-                startActivity(intent);
+                selectedMovie = movies.get(position);
+                selectedMovieId = selectedMovie.getId().toString();
+
+                FetchTrailersTask trailersTask = new FetchTrailersTask();
+                trailersTask.execute();
             }
         });
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
         FetchMoviesTask moviesTask;
 
         loadPreferences();
@@ -105,6 +150,19 @@ public class MainActivity extends AppCompatActivity {
                 moviesTask.execute();
             }
         }
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.alardizabal.popularmovies/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
@@ -123,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
         outState.putSerializable(STATE_SORT_TYPE, sortByType);
     }
 
-    private void loadPreferences(){
+    private void loadPreferences() {
         SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
         backButtonPressed = sharedPreferences.getBoolean(BACK_BUTTON_PRESSED, false);
         if (backButtonPressed) {
@@ -155,6 +213,10 @@ public class MainActivity extends AppCompatActivity {
             moviesTask.execute();
             return true;
         }
+        if (id == R.id.action_favorites) {
+            sortByType = SortByType.favorites;
+            return true;
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -165,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
 
         private String MOVIE_BASE_URL;
 
-        public FetchMoviesTask (SortByType sortType) {
+        public FetchMoviesTask(SortByType sortType) {
             if (sortType == SortByType.mostPopular) {
                 sortByType = SortByType.mostPopular;
                 MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/popular?";
@@ -175,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        private List<Movie> getMovieDataFromJson(String movieJsonStr)
+        private List<Movie> getMoviesDataFromJson(String moviesJsonStr)
                 throws JSONException {
 
             final String MOVIES_LIST = "results";
@@ -190,10 +252,10 @@ public class MainActivity extends AppCompatActivity {
 
             movies.clear();
 
-            JSONObject movieJson = new JSONObject(movieJsonStr);
-            Log.v(LOG_TAG, "JSON: " + movieJson);
+            JSONObject moviesJson = new JSONObject(moviesJsonStr);
+            Log.v(LOG_TAG, "JSON: " + moviesJson);
 
-            JSONArray movieArray = movieJson.getJSONArray(MOVIES_LIST);
+            JSONArray movieArray = moviesJson.getJSONArray(MOVIES_LIST);
 
             for (int i = 0; i < movieArray.length(); i++) {
 
@@ -226,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
 
-            String movieJsonStr = null;
+            String moviesJsonStr = null;
 
             try {
                 final String APPID_PARAM = "api_key";
@@ -258,9 +320,9 @@ public class MainActivity extends AppCompatActivity {
                 if (buffer.length() == 0) {
                     return null;
                 }
-                movieJsonStr = buffer.toString();
+                moviesJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Movie JSON String: " + movieJsonStr);
+                Log.v(LOG_TAG, "Movie JSON String: " + moviesJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 return null;
@@ -278,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             try {
-                return getMovieDataFromJson(movieJsonStr);
+                return getMoviesDataFromJson(moviesJsonStr);
             } catch (JSONException e) {
                 Log.e(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
@@ -290,7 +352,243 @@ public class MainActivity extends AppCompatActivity {
             if (result != null) {
                 ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
                 gridView.setAdapter(imageAdapter);
+            }
+        }
+    }
 
+    public class FetchTrailersTask extends AsyncTask<String, Void, List<Trailer>> {
+
+        private final String LOG_TAG = FetchTrailersTask.class.getSimpleName();
+
+        private List<Trailer> getTrailersFromJson(String trailersJsonStr)
+                throws  JSONException {
+
+            final String TRAILERS_LIST = "results";
+
+            final String TRAILER_ID = "id";
+            final String TRAILER_KEY = "key";
+            final String TRAILER_NAME = "name";
+
+            trailers.clear();
+
+            JSONObject trailersJson = new JSONObject(trailersJsonStr);
+            Log.v(LOG_TAG, "JSON: " + trailersJson);
+
+            JSONArray trailersArray = trailersJson.getJSONArray(TRAILERS_LIST);
+
+            for (int i = 0; i < trailersArray.length(); i++) {
+
+                JSONObject trailerObject = trailersArray.getJSONObject(i);
+
+                Trailer trailer = new Trailer();
+
+                String trailerId = trailerObject.getString(TRAILER_ID);
+                String trailerKey = trailerObject.getString(TRAILER_KEY);
+                String trailerName = trailerObject.getString(TRAILER_NAME);
+
+                trailer.setId(trailerId);
+                trailer.setKey(trailerKey);
+                trailer.setName(trailerName);
+
+                trailers.add(trailer);
+            }
+            return trailers;
+        }
+
+        @Override
+        protected List<Trailer> doInBackground(String... params) {
+            HttpURLConnection urlConnection = null;
+            BufferedReader reader = null;
+
+            String trailersJsonStr = null;
+
+            try {
+                final String APPID_PARAM = "api_key";
+
+                String TRAILERS_BASE_URL = "http://api.themoviedb.org/3/movie/" + selectedMovieId +"/videos?";
+
+                Uri builtUri = Uri.parse(TRAILERS_BASE_URL).buildUpon()
+                        .appendQueryParameter(APPID_PARAM, BuildConfig.MOVIE_API_KEY)
+                        .build();
+
+                URL url = new URL(builtUri.toString());
+
+                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
+                    return null;
+                }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line + "\n");
+                }
+
+                if (buffer.length() == 0) {
+                    return null;
+                }
+                trailersJsonStr = buffer.toString();
+
+                Log.v(LOG_TAG, "Trailer JSON String: " + trailersJsonStr);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Error ", e);
+                return null;
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
+                }
+            }
+
+            try {
+                return getTrailersFromJson(trailersJsonStr);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(List<Trailer> result) {
+            if (result != null) {
+                trailers = new ArrayList<>(result);
+                FetchReviewsTask reviewsTask = new FetchReviewsTask();
+                reviewsTask.execute();
+            }
+        }
+    }
+
+    public class FetchReviewsTask extends AsyncTask<String, Void, List<Review>> {
+
+        private final String LOG_TAG = FetchReviewsTask.class.getSimpleName();
+
+        private List<Review> getReviewsFromJson(String reviewsJsonStr)
+                throws  JSONException {
+
+            final String REVIEWS_LIST = "results";
+
+            final String REVIEW_ID = "id";
+            final String REVIEW_AUTHOR = "author";
+            final String REVIEW_CONTENT = "content";
+
+            reviews.clear();
+
+            JSONObject reviewJson = new JSONObject(reviewsJsonStr);
+            Log.v(LOG_TAG, "JSON: " + reviewJson);
+
+            JSONArray reviewArray = reviewJson.getJSONArray(REVIEWS_LIST);
+
+            for (int i = 0; i < reviewArray.length(); i++) {
+
+                JSONObject reviewObject = reviewArray.getJSONObject(i);
+                Review review = new Review();
+
+                String reviewId = reviewObject.getString(REVIEW_ID);
+                String reviewAuthor = reviewObject.getString(REVIEW_AUTHOR);
+                String reviewContent = reviewObject.getString(REVIEW_CONTENT);
+
+                review.setId(reviewId);
+                review.setAuthor(reviewAuthor);
+                review.setContent(reviewContent);
+
+                reviews.add(review);
+            }
+            return reviews;
+        }
+
+        @Override
+        protected List<Review> doInBackground(String... params) {
+            HttpURLConnection urlConnection = null;
+            BufferedReader reader = null;
+
+            String reviewsJsonStr = null;
+
+            try {
+                final String APPID_PARAM = "api_key";
+
+                String REVIEW_BASE_URL = "http://api.themoviedb.org/3/movie/" + selectedMovieId +"/reviews?";
+
+                Uri builtUri = Uri.parse(REVIEW_BASE_URL).buildUpon()
+                        .appendQueryParameter(APPID_PARAM, BuildConfig.MOVIE_API_KEY)
+                        .build();
+
+                URL url = new URL(builtUri.toString());
+
+                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
+                    return null;
+                }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line + "\n");
+                }
+
+                if (buffer.length() == 0) {
+                    return null;
+                }
+                reviewsJsonStr = buffer.toString();
+
+                Log.v(LOG_TAG, "Review JSON String: " + reviewsJsonStr);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Error ", e);
+                return null;
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
+                }
+            }
+
+            try {
+                return getReviewsFromJson(reviewsJsonStr);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        protected void onPostExecute(List<Review> result) {
+            if (result != null) {
+                reviews = new ArrayList<>(result);
+                Intent intent = new Intent(getBaseContext(), DetailActivity.class)
+                        .putExtra("originalTitle", selectedMovie.getOriginalTitle())
+                        .putExtra("posterPath", selectedMovie.getPosterPath())
+                        .putExtra("overview", selectedMovie.getOverview())
+                        .putExtra("voteAverage", selectedMovie.getVoteAverage())
+                        .putExtra("releaseDate", selectedMovie.getReleaseDate())
+                        .putParcelableArrayListExtra("trailers", trailers)
+                        .putParcelableArrayListExtra("reviews", reviews);
+                startActivity(intent);
             }
         }
     }
@@ -321,8 +619,8 @@ public class MainActivity extends AppCompatActivity {
 
                 DisplayMetrics metrics = context.getResources().getDisplayMetrics();
                 int width = metrics.widthPixels;
-                int adjustedWidth = (int)(width/2);
-                int adjustedHeight = (int)(adjustedWidth * 1.5027027);
+                int adjustedWidth = (int) (width / 2);
+                int adjustedHeight = (int) (adjustedWidth * 1.5027027);
                 imageView.setLayoutParams(new GridView.LayoutParams(adjustedWidth, adjustedHeight));
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {

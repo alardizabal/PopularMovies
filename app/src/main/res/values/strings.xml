@@ -2,5 +2,6 @@
     <string name="app_name">Popular Movies</string>
     <string name="action_mostPopular">Most Popular</string>
     <string name="action_topRated">Top Rated</string>
+    <string name="action_favorites">My Favorites</string>
     <string name="preference_file_key">com.alardizabal.popularmovies.PREFERENCE_FILE_KEY</string>
 </resources>

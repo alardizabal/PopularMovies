@@ -6,9 +6,12 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+
+import java.util.ArrayList;
 
 /*
     TODO
@@ -25,6 +28,11 @@ public class DetailActivity extends AppCompatActivity {
     private Double voteAverage;
     private String releaseDate = "";
 
+    private ArrayList<Trailer> trailers;
+    private ArrayList<Review> reviews;
+
+    private ListView listView;
+
     static final String BACK_BUTTON_PRESSED = "backButtonPressed";
     static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
 
@@ -33,6 +41,8 @@ public class DetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
+        listView = (ListView) findViewById(R.id.listview);
+
         Intent intent = this.getIntent();
         if (intent != null) {
             originalTitle = intent.getStringExtra("originalTitle");
@@ -40,6 +50,8 @@ public class DetailActivity extends AppCompatActivity {
             overview = intent.getStringExtra("overview");
             voteAverage = intent.getDoubleExtra("voteAverage", 0);
             releaseDate = intent.getStringExtra("releaseDate");
+            trailers = intent.getParcelableArrayListExtra("trailers");
+            reviews = intent.getParcelableArrayListExtra("reviews");
         }
 
         TextView textViewOriginalTitle = ((TextView) findViewById(R.id.textViewOriginalTitle));
