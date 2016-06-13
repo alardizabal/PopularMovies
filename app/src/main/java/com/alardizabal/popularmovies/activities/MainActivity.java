@@ -106,8 +106,6 @@ public class MainActivity extends AppCompatActivity {
     public ArrayList<Review> reviews;
     private Set<String> savedFavoritesList;
 
-    private DetailFragment detailFragment;
-
     private Movie selectedMovie;
     private String selectedMovieId;
 
@@ -118,8 +116,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        detailFragment = new DetailFragment();
 
         if (savedInstanceState != null) {
             sortByType = (SortByType) savedInstanceState.get(STATE_SORT_TYPE);
@@ -160,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client.connect();
+
         FetchMoviesTask moviesTask;
 
         loadPreferences();
@@ -168,6 +165,8 @@ public class MainActivity extends AppCompatActivity {
             if (sortByType == null) {
                 moviesTask = new FetchMoviesTask(SortByType.mostPopular);
                 moviesTask.execute();
+            } else if (sortByType == SortByType.favorites) {
+                updateFavorites();
             } else {
                 moviesTask = new FetchMoviesTask(sortByType);
                 moviesTask.execute();
@@ -239,31 +238,36 @@ public class MainActivity extends AppCompatActivity {
         }
         if (id == R.id.action_favorites) {
             sortByType = SortByType.favorites;
-            SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
-            savedFavoritesList = sharedPreferences.getStringSet(FAVORITES_LIST, new HashSet<String>());
 
-            if (savedFavoritesList.size() == 0) {
-                movies.clear();
-            } else {
-                int lastMovieIndex = movies.size() - 1;
-                for (int i = lastMovieIndex; i > 0; i--) {
-                    Movie movie = movies.get(i);
-                    String movieId = movie.getId().toString();
-                    Boolean isFavorite = savedFavoritesList.contains(movieId);
-
-                    if (isFavorite == false) {
-                        movies.remove(i);
-                    }
-                }
-            }
-
-            ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
-            gridView.setAdapter(imageAdapter);
+            updateFavorites();
 
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateFavorites() {
+        SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
+        savedFavoritesList = sharedPreferences.getStringSet(FAVORITES_LIST, new HashSet<String>());
+
+        if (savedFavoritesList.size() == 0) {
+            movies.clear();
+        } else {
+            int lastMovieIndex = movies.size() - 1;
+            for (int i = lastMovieIndex; i > -1; i--) {
+                Movie movie = movies.get(i);
+                String movieId = movie.getId().toString();
+                Boolean isFavorite = savedFavoritesList.contains(movieId);
+
+                if (isFavorite == false) {
+                    movies.remove(i);
+                }
+            }
+        }
+
+        ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
+        gridView.setAdapter(imageAdapter);
     }
 
     public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {
