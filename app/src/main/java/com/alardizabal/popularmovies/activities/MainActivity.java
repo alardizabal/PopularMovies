@@ -19,8 +19,9 @@ import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.alardizabal.popularmovies.BuildConfig;
-import com.alardizabal.popularmovies.models.Movie;
 import com.alardizabal.popularmovies.R;
+import com.alardizabal.popularmovies.fragments.DetailFragment;
+import com.alardizabal.popularmovies.models.Movie;
 import com.alardizabal.popularmovies.models.Review;
 import com.alardizabal.popularmovies.models.Trailer;
 import com.bumptech.glide.Glide;
@@ -105,8 +106,12 @@ public class MainActivity extends AppCompatActivity {
     public ArrayList<Review> reviews;
     private Set<String> savedFavoritesList;
 
+    private DetailFragment detailFragment;
+
     private Movie selectedMovie;
     private String selectedMovieId;
+
+    private boolean twoPane;
 
     SortByType sortByType;
 
@@ -114,10 +119,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        detailFragment = new DetailFragment();
+
         if (savedInstanceState != null) {
             sortByType = (SortByType) savedInstanceState.get(STATE_SORT_TYPE);
         }
+
         setContentView(R.layout.activity_main);
+
+        if (findViewById(R.id.item_detail_container) != null) {
+            twoPane = true;
+        } else {
+            twoPane = false;
+        }
 
         movies = new ArrayList<>();
         trailers = new ArrayList<>();
@@ -225,6 +239,8 @@ public class MainActivity extends AppCompatActivity {
         }
         if (id == R.id.action_favorites) {
             sortByType = SortByType.favorites;
+            SharedPreferences sharedPreferences = this.getSharedPreferences(PREFERENCE_FILE_KEY, this.MODE_PRIVATE);
+            savedFavoritesList = sharedPreferences.getStringSet(FAVORITES_LIST, new HashSet<String>());
 
             if (savedFavoritesList.size() == 0) {
                 movies.clear();
@@ -609,16 +625,35 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(List<Review> result) {
             if (result != null) {
                 reviews = new ArrayList<>(result);
-                Intent intent = new Intent(getBaseContext(), DetailActivity.class)
-                        .putExtra("movieId", selectedMovieId)
-                        .putExtra("originalTitle", selectedMovie.getOriginalTitle())
-                        .putExtra("posterPath", selectedMovie.getPosterPath())
-                        .putExtra("overview", selectedMovie.getOverview())
-                        .putExtra("voteAverage", selectedMovie.getVoteAverage())
-                        .putExtra("releaseDate", selectedMovie.getReleaseDate())
-                        .putParcelableArrayListExtra("trailers", trailers)
-                        .putParcelableArrayListExtra("reviews", reviews);
-                startActivity(intent);
+
+                if (twoPane == true) {
+                    Bundle bundle = new Bundle();
+                    bundle.putString("movieId", selectedMovieId);
+                    bundle.putString("originalTitle", selectedMovie.getOriginalTitle());
+                    bundle.putString("posterPath", selectedMovie.getPosterPath());
+                    bundle.putString("overview", selectedMovie.getOverview());
+                    bundle.putDouble("voteAverage", selectedMovie.getVoteAverage());
+                    bundle.putString("releaseDate", selectedMovie.getReleaseDate());
+                    bundle.putParcelableArrayList("trailers", trailers);
+                    bundle.putParcelableArrayList("reviews", reviews);
+
+                    DetailFragment fragment = new DetailFragment();
+                    fragment.setArguments(bundle);
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.item_detail_container, fragment)
+                            .commit();
+                } else {
+                    Intent intent = new Intent(getBaseContext(), DetailActivity.class)
+                            .putExtra("movieId", selectedMovieId)
+                            .putExtra("originalTitle", selectedMovie.getOriginalTitle())
+                            .putExtra("posterPath", selectedMovie.getPosterPath())
+                            .putExtra("overview", selectedMovie.getOverview())
+                            .putExtra("voteAverage", selectedMovie.getVoteAverage())
+                            .putExtra("releaseDate", selectedMovie.getReleaseDate())
+                            .putParcelableArrayListExtra("trailers", trailers)
+                            .putParcelableArrayListExtra("reviews", reviews);
+                    startActivity(intent);
+                }
             }
         }
     }
@@ -648,7 +683,12 @@ public class MainActivity extends AppCompatActivity {
                 imageView = new ImageView(context);
 
                 DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-                int width = metrics.widthPixels;
+                int width;
+                if (twoPane == true) {
+                    width = metrics.widthPixels / 2;
+                } else {
+                    width = metrics.widthPixels;
+                }
                 int adjustedWidth = (int) (width / 2);
                 int adjustedHeight = (int) (adjustedWidth * 1.5027027);
                 imageView.setLayoutParams(new GridView.LayoutParams(adjustedWidth, adjustedHeight));
