@@ -1,12 +1,15 @@
 package com.alardizabal.popularmovies.models;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 /**
  * Created by alardizabal on 4/30/16.
  */
-public class Movie {
+public class Movie implements Parcelable {
 
     @SerializedName("poster_path")
     @Expose
@@ -217,5 +220,52 @@ public class Movie {
      */
     public void setVoteAverage(Double voteAverage) {
         this.voteAverage = voteAverage;
+    }
+
+    // Parcelable
+    public int describeContents() {
+        return 0;
+    }
+
+    public void writeToParcel(Parcel out, int flags) {
+        out.writeString(posterPath);
+        out.writeString(overview);
+        out.writeString(releaseDate);
+        out.writeLong(id);
+        out.writeString(originalTitle);
+        out.writeString(title);
+        out.writeString(backdropPath);
+//        out.writeDouble(popularity);
+//        out.writeLong(voteCount);
+        out.writeDouble(voteAverage);
+    }
+
+    public static final Parcelable.Creator<Movie> CREATOR
+            = new Parcelable.Creator<Movie>() {
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
+
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
+
+    private Movie(Parcel in) {
+        posterPath = in.readString();
+        overview = in.readString();
+        releaseDate = in.readString();
+        id = in.readLong();
+        originalTitle = in.readString();
+        title = in.readString();
+        backdropPath = in.readString();
+//        popularity = in.readDouble();
+//        voteCount = in.readLong();
+        voteAverage = in.readDouble();
+    }
+
+    // Constructor
+    public Movie() {
+
     }
 }

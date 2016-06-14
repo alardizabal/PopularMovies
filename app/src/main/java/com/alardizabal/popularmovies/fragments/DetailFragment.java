@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +15,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,6 +34,8 @@ public class DetailFragment extends Fragment {
 
     private final String LOG_TAG = getClass().getSimpleName();
 
+    private View rootView;
+
     private String selectedMovieId = "";
     private String originalTitle = "";
     private String posterPath = "";
@@ -45,7 +49,7 @@ public class DetailFragment extends Fragment {
     private ListView trailersListView;
     private ListView reviewsListView;
 
-    static final String BACK_BUTTON_PRESSED = "backButtonPressed";
+    static final String SCROLL_POSITION = "scrollPosition";
     static final String FAVORITES_LIST = "favoritesList";
     static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
 
@@ -55,8 +59,29 @@ public class DetailFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
+    }
 
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        ScrollView scrollView = (ScrollView) rootView.findViewById(R.id.detailScrollView);
+        outState.putIntArray(SCROLL_POSITION, new int[]{ scrollView.getScrollX(), scrollView.getScrollY() });
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable final Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        final ScrollView scrollView = (ScrollView) rootView.findViewById(R.id.detailScrollView);
+        if (savedInstanceState != null) {
+            final int[] position = savedInstanceState.getIntArray(SCROLL_POSITION);
+            if (position != null) {
+                scrollView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        scrollView.scrollTo(position[0], position[1]);
+                    }
+                });
+            }
         }
     }
 
@@ -74,7 +99,7 @@ public class DetailFragment extends Fragment {
         trailers = bundle.getParcelableArrayList("trailers");
         reviews = bundle.getParcelableArrayList("reviews");
 
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+        rootView = inflater.inflate(R.layout.fragment_detail, container, false);
         trailersListView = (ListView) rootView.findViewById(R.id.trailersListview);
         reviewsListView = (ListView) rootView.findViewById(R.id.reviewsListview);
 
@@ -152,10 +177,21 @@ public class DetailFragment extends Fragment {
         ReviewListAdapter reviewListAdapter = new ReviewListAdapter(getContext(), R.layout.list_item_review, reviews);
         reviewsListView.setAdapter(reviewListAdapter);
 
+        if (trailers.size() == 0) {
+            TextView trailersTitleLabel = (TextView) rootView.findViewById(R.id.trailersTitleLabel);
+            trailersTitleLabel.setVisibility(View.GONE);
+            trailersListView.setVisibility(View.GONE);
+        }
+
         if (reviews.size() == 0) {
             TextView reviewsTitleLabel = (TextView) rootView.findViewById(R.id.reviewsTitleLabel);
             reviewsTitleLabel.setVisibility(View.GONE);
             reviewsListView.setVisibility(View.GONE);
+        }
+
+        if (savedInstanceState != null) {
+            final ScrollView scrollView = (ScrollView) rootView.findViewById(R.id.detailScrollView);
+            scrollView.scrollTo(0, 0);
         }
 
         return rootView;

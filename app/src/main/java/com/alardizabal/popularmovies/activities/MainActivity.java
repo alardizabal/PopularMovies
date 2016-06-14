@@ -51,7 +51,7 @@ import java.util.Set;
     3) Use gson
     4) Move strings to strings file
     5) Move constants to constants file
-    6) Make models conforms to Parcelable
+    6) Make models conform to Parcelable
     7) Use butterknife
     8) Use Retrofit
     9) Glide error handling
@@ -96,7 +96,11 @@ public class MainActivity extends AppCompatActivity {
     static final String STATE_SORT_TYPE = "sortType";
     static final String BACK_BUTTON_PRESSED = "backButtonPressed";
     static final String FAVORITES_LIST = "favoritesList";
+    static final String MOVIES_LIST = "moviesList";
     static final String PREFERENCE_FILE_KEY = "com.alardizabal.popularmovies.PREFERENCE_FILE_KEY";
+
+    static final String STATE_SCROLL_POSITION = "scrollPosition";
+    int savedPosition = 0;
 
     private Boolean backButtonPressed;
 
@@ -199,8 +203,21 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
+
+        int currentPosition = gridView.getFirstVisiblePosition();
+        outState.putInt(STATE_SCROLL_POSITION, currentPosition);
         outState.putSerializable(STATE_SORT_TYPE, sortByType);
+        outState.putParcelableArrayList(MOVIES_LIST, (ArrayList)movies);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        savedPosition = savedInstanceState.getInt(STATE_SCROLL_POSITION);
+        movies = savedInstanceState.getParcelableArrayList(MOVIES_LIST);
+        gridView.setSelection(savedPosition);
     }
 
     private void loadPreferences() {
@@ -222,6 +239,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
+        savedPosition = 0;
         int id = item.getItemId();
 
         if (id == R.id.action_mostPopular) {
@@ -268,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
 
         ImageAdapter imageAdapter = new ImageAdapter(getBaseContext());
         gridView.setAdapter(imageAdapter);
+        gridView.setSelection(savedPosition);
     }
 
     public class FetchMoviesTask extends AsyncTask<String, Void, List<Movie>> {

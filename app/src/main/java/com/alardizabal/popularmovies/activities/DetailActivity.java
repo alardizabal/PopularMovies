@@ -9,13 +9,6 @@ import android.view.MenuItem;
 import com.alardizabal.popularmovies.R;
 import com.alardizabal.popularmovies.fragments.DetailFragment;
 
-/*
-    TODO
-    1) Improve landscape layout
-    2) Move strings to strings file
-    3) Move constants to constants file
- */
-
 public class DetailActivity extends AppCompatActivity {
 
     private final String LOG_TAG = getClass().getSimpleName();
@@ -28,10 +21,9 @@ public class DetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
-
+        Bundle bundle = new Bundle();
         Intent intent = this.getIntent();
         if (intent != null) {
-            Bundle bundle = new Bundle();
             bundle.putString("movieId", intent.getStringExtra("movieId"));
             bundle.putString("originalTitle", intent.getStringExtra("originalTitle"));
             bundle.putString("posterPath", intent.getStringExtra("posterPath"));
@@ -40,7 +32,9 @@ public class DetailActivity extends AppCompatActivity {
             bundle.putString("releaseDate", intent.getStringExtra("releaseDate"));
             bundle.putParcelableArrayList("trailers",intent.getParcelableArrayListExtra("trailers"));
             bundle.putParcelableArrayList("reviews", intent.getParcelableArrayListExtra("reviews"));
+        }
 
+        if (savedInstanceState == null) {
             DetailFragment fragment = new DetailFragment();
             fragment.setArguments(bundle);
             getSupportFragmentManager().beginTransaction()
